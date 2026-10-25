@@ -1,13 +1,32 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-enum Role { USER ADMIN }
-enum AppStatus { SUBMITTED UNDER_REVIEW OFFERED ACCEPTED DISBURSED DECLINED }
-enum ReviewStatus { PENDING APPROVED REJECTED }
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AppStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  OFFERED
+  ACCEPTED
+  DISBURSED
+  DECLINED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
 model User {
   id           String        @id @default(cuid())
@@ -15,8 +34,8 @@ model User {
   phone        String?       @unique
   passwordHash String
   role         Role          @default(USER)
-  totpSecret   String?       // required for ADMIN
-  kycStatus    String        @default("PENDING") // PENDING | VERIFIED | FAILED
+  totpSecret   String?
+  kycStatus    String        @default("PENDING")
   kycRef       String?
   failedLogins Int           @default(0)
   lockedUntil  DateTime?
@@ -28,11 +47,12 @@ model User {
 model OtpCode {
   id        String    @id @default(cuid())
   contact   String
-  purpose   String    // SIGNUP | RESET
+  purpose   String
   codeHash  String
   attempts  Int       @default(0)
   expiresAt DateTime
   usedAt    DateTime?
+
   @@index([contact, purpose])
 }
 
@@ -43,11 +63,11 @@ model Application {
   fullName    String
   dob         DateTime
   idType      String
-  idNumberEnc String    // encrypted
-  idDocKey    String    // private object-storage key
+  idNumberEnc String
+  idDocKey    String
   phone       String
   email       String?
-  country     String    // LC | MX
+  country     String
   state       String
   address     String
   supportType String
@@ -67,7 +87,7 @@ model Offer {
   amountUsd     Int
   termMonths    Int
   aprPct        Float
-  feeUsd        Int          @default(0) // disclosed; deducted from proceeds, never prepaid
+  feeUsd        Int          @default(0)
   acceptedAt    DateTime?
   declinedAt    DateTime?
   signedName    String?
@@ -78,7 +98,7 @@ model BankAccount {
   id      String @id @default(cuid())
   offerId String @unique
   offer   Offer  @relation(fields: [offerId], references: [id])
-  dataEnc String // encrypted JSON, collected only after offer acceptance
+  dataEnc String
 }
 
 model Review {
