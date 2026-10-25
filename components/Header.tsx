@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 function Mark() {
   return (
@@ -13,7 +14,7 @@ export default function Header() {
   const links = [["/#tracks", "Funding"], ["/#how", "How it works"], ["/#reviews", "Reviews"], ["/contact", "Contact"]];
   return (
     <header className="site-h"><div className="nav">
-      <Link className="logo" href="/"><Mark /><span>Capiryx</span></Link>
+      <Link className="logo" href="/"><Logo /><span>Capiryx</span></Link>
       <nav className="desk">
         {links.map(([h, t]) => <Link key={h} href={h}>{t}</Link>)}
         <Link className="btn" href="/dashboard">Apply or log in</Link>
