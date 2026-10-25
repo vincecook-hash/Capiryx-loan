@@ -1,0 +1,100 @@
+generator client { provider = "prisma-client-js" }
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role { USER ADMIN }
+enum AppStatus { SUBMITTED UNDER_REVIEW OFFERED ACCEPTED DISBURSED DECLINED }
+enum ReviewStatus { PENDING APPROVED REJECTED }
+
+model User {
+  id           String        @id @default(cuid())
+  email        String?       @unique
+  phone        String?       @unique
+  passwordHash String
+  role         Role          @default(USER)
+  totpSecret   String?       // required for ADMIN
+  kycStatus    String        @default("PENDING") // PENDING | VERIFIED | FAILED
+  kycRef       String?
+  failedLogins Int           @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime      @default(now())
+  applications Application[]
+  reviews      Review[]
+}
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  contact   String
+  purpose   String    // SIGNUP | RESET
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  @@index([contact, purpose])
+}
+
+model Application {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  fullName    String
+  dob         DateTime
+  idType      String
+  idNumberEnc String    // encrypted
+  idDocKey    String    // private object-storage key
+  phone       String
+  email       String?
+  country     String    // LC | MX
+  state       String
+  address     String
+  supportType String
+  amountUsd   Int
+  description String
+  status      AppStatus @default(SUBMITTED)
+  adminNote   String?
+  createdAt   DateTime  @default(now())
+  offers      Offer[]
+}
+
+model Offer {
+  id            String       @id @default(cuid())
+  applicationId String
+  application   Application  @relation(fields: [applicationId], references: [id])
+  lender        String
+  amountUsd     Int
+  termMonths    Int
+  aprPct        Float
+  feeUsd        Int          @default(0) // disclosed; deducted from proceeds, never prepaid
+  acceptedAt    DateTime?
+  declinedAt    DateTime?
+  signedName    String?
+  bank          BankAccount?
+}
+
+model BankAccount {
+  id      String @id @default(cuid())
+  offerId String @unique
+  offer   Offer  @relation(fields: [offerId], references: [id])
+  dataEnc String // encrypted JSON, collected only after offer acceptance
+}
+
+model Review {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  text      String
+  status    ReviewStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  target    String
+  detail    Json?
+  createdAt DateTime @default(now())
+}
