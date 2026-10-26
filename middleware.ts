@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-// In-memory limiter: fine for one instance. For several instances or serverless, swap for Upstash Redis.
-const hits = new Map<string, { n: number; reset: number }>();
-function limited(key: string, max: number, windowMs: number) {
-  const now = Date.now(), h = hits.get(key);
-  if (!h || h.reset < now) { hits.set(key, { n: 1, reset: now + windowMs }); return false; }
+// Uses Upstash Redis when its keys are set (shared across servers); otherwise a per-instance memory counter.
+const mem = new Map<string, { n: number; reset: number }>();
+async function limited(key: string, max: number, windowSec: number) {
+  const url = process.env.UPSTASH_REDIS_REST_URL, tok = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url && tok) {
+    try {
+      const r = await fetch(`${url}/pipeline`, { method: "POST", headers: { Authorization: `Bearer ${tok}` },
+        body: JSON.stringify([["INCR", key], ["EXPIRE", key, windowSec, "NX"]]) });
+      const j = await r.json();
+      return Number(j[0].result) > max;
+    } catch { /* fall back to memory */ }
+  }
+  const now = Date.now(), h = mem.get(key);
+  if (!h || h.reset < now) { mem.set(key, { n: 1, reset: now + windowSec * 1000 }); return false; }
   return ++h.n > max;
 }
 
@@ -15,9 +24,8 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.startsWith("/api/")) {
     const strict = pathname.startsWith("/api/auth") || pathname === "/api/admin/login";
-    if (limited(`${ip}:${strict ? "auth" : "api"}`, strict ? 20 : 120, strict ? 600_000 : 60_000))
+    if (await limited(`rl:${ip}:${strict ? "auth" : "api"}`, strict ? 20 : 120, strict ? 600 : 60))
       return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
-    // Origin check for state-changing calls (the KYC webhook is server to server)
     if (req.method !== "GET" && pathname !== "/api/kyc/webhook") {
       const origin = req.headers.get("origin");
       if (!origin || new URL(origin).host !== req.nextUrl.host)

@@ -1,18 +1,24 @@
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createClient } from "@supabase/supabase-js";
 
-// Works with Supabase Storage (S3 protocol), AWS S3, and R2.
-const s3 = new S3Client({
-  region: process.env.S3_REGION,
-  endpoint: process.env.S3_ENDPOINT || undefined,
-  forcePathStyle: true,
-  credentials: { accessKeyId: process.env.S3_KEY!, secretAccessKey: process.env.S3_SECRET! },
-});
-const Bucket = process.env.S3_BUCKET!; // private bucket; set 5 MB limit and allowed types on it
+// Server-only. The service key must never be exposed to the browser.
+const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+const bucket = process.env.SUPABASE_BUCKET || "id-documents";
 
 export const ALLOWED = ["image/jpeg", "image/png", "application/pdf"];
+export const MAX_BYTES = 4 * 1024 * 1024;
 
-export const uploadUrl = (Key: string, type: string) =>
-  getSignedUrl(s3, new PutObjectCommand({ Bucket, Key, ContentType: type }), { expiresIn: 300 });
-export const viewUrl = (Key: string) =>
-  getSignedUrl(s3, new GetObjectCommand({ Bucket, Key }), { expiresIn: 60 });
+export function looksValid(b: Buffer, type: string) {
+  if (type === "image/jpeg") return b[0] === 0xff && b[1] === 0xd8;
+  if (type === "image/png") return b.subarray(0, 4).toString("hex") === "89504e47";
+  if (type === "application/pdf") return b.subarray(0, 4).toString() === "%PDF";
+  return false;
+}
+export async function saveId(key: string, buf: Buffer, type: string) {
+  const { error } = await sb.storage.from(bucket).upload(key, buf, { contentType: type, upsert: false });
+  if (error) throw error;
+}
+export async function viewUrl(key: string) {
+  const { data, error } = await sb.storage.from(bucket).createSignedUrl(key, 60);
+  if (error || !data) throw error ?? new Error("no url");
+  return data.signedUrl;
+}
