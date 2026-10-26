@@ -28,7 +28,11 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
     if (req.method !== "GET" && pathname !== "/api/kyc/webhook") {
       const origin = req.headers.get("origin");
-      if (!origin || new URL(origin).host !== req.nextUrl.host)
+      const hosts = [req.headers.get("x-forwarded-host"), req.headers.get("host"), req.nextUrl.host,
+        process.env.APP_URL ? new URL(process.env.APP_URL).host : null].filter(Boolean);
+      let originHost = "";
+      try { originHost = new URL(origin ?? "").host; } catch {}
+      if (!originHost || !hosts.includes(originHost))
         return NextResponse.json({ error: "Bad origin" }, { status: 403 });
     }
   }
