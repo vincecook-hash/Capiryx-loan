@@ -8,7 +8,7 @@ const Body = z.object({
   fullName: z.string().trim().min(3).max(120), dob: z.coerce.date(),
   idType: z.enum(["Passport", "National ID card", "Driver’s licence"]),
   idNumber: z.string().trim().min(4).max(40), idDocKey: z.string().min(1), // key from a private-bucket upload
-  phone: z.string().regex(/^\+\d{7,15}$/), email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().transform(v => v.replace(/[\s\-().]/g, "")).pipe(z.string().regex(/^\+\d{7,15}$/)), email: z.string().email().optional().or(z.literal("")),
   country: z.enum(["LC", "MX"]), // Cuba stays disabled until legal review
   state: z.string().trim().min(2), address: z.string().trim().min(5),
   supportType: z.enum(["Business growth", "New business start-up", "Home purchase support", "Home repair or improvement"]),

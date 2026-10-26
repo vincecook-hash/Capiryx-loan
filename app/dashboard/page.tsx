@@ -103,7 +103,9 @@ function Apply({ setMsg, reload }: any) {
     const uj = await up.json().catch(() => ({}));
     if (!up.ok) return setMsg(uj.error ?? "ID upload failed.");
     const r = await api("/api/applications", "POST", { ...f, idDocKey: uj.key, amountUsd: Number(f.amountUsd) });
-    setMsg(r.ok ? "Application received. We will notify you as it moves forward." : "Check your details: " + Object.keys(r.data.fields ?? {}).join(", "));
+    const NAMES: any = { fullName: "full legal name", dob: "date of birth", idNumber: "ID number (at least 4 characters)", phone: "phone (start with + and the country code, e.g. +17585550123)", email: "email address", country: "country", state: "state or district", address: "home address (at least 5 characters)", supportType: "type of support", amountUsd: "amount (at least 500)", description: "reason for funding (at least 20 characters)" };
+    setMsg(r.ok ? "Application received. We will notify you as it moves forward." : r.data.fields ? "Please fix: " + Object.keys(r.data.fields).map(k => NAMES[k] ?? k).join("; ") : (r.data.error ?? "Could not submit your application."));
+    window.scrollTo({ top: 0, behavior: "smooth" });
     if (r.ok) reload();
   }
   return (<div className="card"><h3>New application</h3>
