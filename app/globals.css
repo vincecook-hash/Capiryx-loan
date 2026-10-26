@@ -91,3 +91,30 @@ table.log{width:100%;border-collapse:collapse;font-size:.85rem}table.log td,tabl
 .btn-green:hover{background:#176b3b}
 button:disabled{opacity:.6;cursor:wait}
 @media(max-width:600px){.btn-green{width:100%}}
+
+.dash-hero{background:radial-gradient(circle at 85% 0%,rgba(227,167,47,.28),transparent 45%),linear-gradient(135deg,#0e2a47,#0b5a63);color:#fff}
+.dash-hero-in{max-width:960px;margin:0 auto;padding:30px 20px}
+.dash-hero h1{color:#fff;margin:.1em 0 .1em;font-size:clamp(1.7rem,4vw,2.4rem)}
+.dash-hero p{margin:0;color:#d6e6ee}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--teal)}
+.eyebrow.light{color:var(--gold)}
+.app{border-top:5px solid var(--teal2)}
+.app-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.app-head h3{margin:.1em 0 0}
+.badge{background:#d8f0ea;color:#0b6769;font-weight:700;font-size:.85rem;border-radius:999px;padding:5px 14px;white-space:nowrap}
+.badge.bad{background:#fde7e7;color:#7a1414}
+.track{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:18px 0 8px}
+.tstep{text-align:center;font-size:.76rem;color:var(--mute);line-height:1.2}
+.tstep i{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin:0 auto 6px;border-radius:50%;border:2px solid var(--line);background:#fff;font-style:normal;font-weight:700}
+.tstep.done i{background:var(--teal);border-color:var(--teal);color:#fff}
+.tstep.now i{background:var(--gold);border-color:var(--gold);color:#0e2a47}
+.tstep.now,.tstep.done{color:var(--ink);font-weight:600}
+.next{background:#eaf6f1;border-left:4px solid #1e8449;border-radius:8px;padding:10px 14px;margin:12px 0}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 18px;margin:14px 0 4px}
+.facts dt{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}
+.facts dd{margin:2px 0 0;font-weight:600;word-break:break-word}
+.facts .wide{grid-column:1/-1}
+.offer{background:var(--mist);border-radius:12px;padding:16px;margin-top:14px}
+.offer h4{margin:0 0 6px;color:var(--ink)}
+.center{text-align:center}
+@media(max-width:700px){.facts{grid-template-columns:1fr 1fr}.tstep{font-size:.68rem}.app-head{flex-direction:column}}

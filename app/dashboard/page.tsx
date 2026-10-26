@@ -8,18 +8,29 @@ const LABEL: any = { SUBMITTED: "Submitted", UNDER_REVIEW: "Under review", OFFER
 export default function Dashboard() {
   const [apps, setApps] = useState<any[] | null>(null);
   const [msg, setMsg] = useState("");
-  const load = async () => { const r = await api("/api/applications"); setApps(r.ok ? r.data : null); };
+  const [openForm, setOpenForm] = useState(false);
+  const load = async () => { const r = await api("/api/applications"); setApps(r.ok ? r.data : null); setOpenForm(false); };
   useEffect(() => { load(); }, []);
   if (!apps) return <Auth onDone={load} />;
-  return (<div className="w">
-    <h1>Your Capiryx dashboard</h1>
-    {msg && <div className="msg">{msg}</div>}
-    <Kyc setMsg={setMsg} />
-    {apps.map(a => <AppCard key={a.id} a={a} setMsg={setMsg} reload={load} />)}
-    <Apply setMsg={setMsg} reload={load} />
-    {apps.some(a => a.status === "DISBURSED") && <ReviewBox setMsg={setMsg} />}
-    <div className="logout-bar"><button className="btn-green" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
-  </div>);
+  const hasActive = apps.some(a => !["DECLINED", "DISBURSED"].includes(a.status));
+  const showForm = !hasActive && (apps.length === 0 || openForm);
+  return (<>
+    <div className="dash-hero"><div className="dash-hero-in">
+      <span className="eyebrow light">Capiryx</span>
+      <h1>Your dashboard</h1>
+      <p>Making life better. Track your application and offers here.</p>
+    </div></div>
+    <div className="w">
+      {msg && <div className="msg">{msg}</div>}
+      <Kyc setMsg={setMsg} />
+      {apps.map(a => <AppCard key={a.id} a={a} setMsg={setMsg} reload={load} />)}
+      {!hasActive && apps.length > 0 && !openForm && (
+        <div className="card center"><p>Need more funding?</p><button onClick={() => setOpenForm(true)}>Start a new application</button></div>)}
+      {showForm && <Apply setMsg={setMsg} reload={load} />}
+      {apps.some(a => a.status === "DISBURSED") && <ReviewBox setMsg={setMsg} />}
+      <div className="logout-bar"><button className="btn-green" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
+    </div>
+  </>);
 }
 
 function Auth({ onDone }: { onDone: () => void }) {
@@ -123,6 +134,16 @@ function Apply({ setMsg, reload }: any) {
     <button onClick={submit}>Submit application</button></div>);
 }
 
+const STEP_NOTE: any = {
+  SUBMITTED: "We have your application. A reviewer will check it and your ID, and you will get an email when anything changes.",
+  UNDER_REVIEW: "Your application is being reviewed. This can take a few days.",
+  OFFERED: "You have an offer. Read the terms below, then accept or decline.",
+  ACCEPTED: "You accepted the offer. The lender is preparing your payment.",
+  DISBURSED: "Your funds have been sent. Please check your bank account.",
+  DECLINED: "This application did not go ahead.",
+};
+const COUNTRY: any = { LC: "St Lucia", MX: "Mexico" };
+
 function AppCard({ a, setMsg, reload }: any) {
   const offer = a.offers?.find((o: any) => !o.declinedAt);
   const [bank, setBank] = useState<any>({ country: a.country });
@@ -130,19 +151,37 @@ function AppCard({ a, setMsg, reload }: any) {
   const set = (k: string) => (e: any) => setBank({ ...bank, [k]: e.target.value });
   const respond = async (action: string) => {
     const r = await api(`/api/offers/${offer.id}`, "POST", action === "accept" ? { action, signedName: sign, bank } : { action });
-    setMsg(r.ok ? "Done." : r.data.error); if (r.ok) reload();
+    setMsg(r.ok ? "Done." : r.data.error); window.scrollTo({ top: 0, behavior: "smooth" }); if (r.ok) reload();
   };
-  return (<div className="card"><h3>{a.supportType}: ${a.amountUsd.toLocaleString()} <span className="pill">{LABEL[a.status]}</span></h3>
-    <p>{STEPS.map(s => (STEPS.indexOf(s) <= STEPS.indexOf(a.status) ? "● " : "○ ") + LABEL[s]).join("   ")}</p>
-    {a.status === "OFFERED" && offer && (<div className="msg">
-      <b>Offer from {offer.lender}</b>
-      <p>Amount ${offer.amountUsd} · {offer.termMonths} months · {offer.aprPct}% APR · Fee ${offer.feeUsd} (taken from the amount sent, never paid in advance). You receive ${offer.amountUsd - offer.feeUsd}.</p>
+  const idx = STEPS.indexOf(a.status);
+  const date = new Date(a.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  return (<div className="card app">
+    <div className="app-head">
+      <div><span className="eyebrow">Application {String(a.id).slice(-8).toUpperCase()}</span><h3>{a.supportType}</h3></div>
+      <span className={"badge" + (a.status === "DECLINED" ? " bad" : "")}>{LABEL[a.status]}</span>
+    </div>
+    {a.status !== "DECLINED" && (<div className="track">{STEPS.map((s, i) => (
+      <div key={s} className={"tstep" + (i < idx ? " done" : i === idx ? " now" : "")}><i>{i < idx ? "\u2713" : i + 1}</i><span>{LABEL[s]}</span></div>))}</div>)}
+    <p className="next"><b>What happens next:</b> {STEP_NOTE[a.status]}</p>
+    <dl className="facts">
+      <div><dt>Amount requested</dt><dd>${a.amountUsd.toLocaleString()}</dd></div>
+      <div><dt>Submitted</dt><dd>{date}</dd></div>
+      <div><dt>Country</dt><dd>{COUNTRY[a.country] ?? a.country}</dd></div>
+      <div><dt>State or district</dt><dd>{a.state}</dd></div>
+      <div><dt>Phone</dt><dd>{a.phone}</dd></div>
+      {a.email && <div><dt>Email</dt><dd>{a.email}</dd></div>}
+      <div className="wide"><dt>Address</dt><dd>{a.address}</dd></div>
+      <div className="wide"><dt>Your reason</dt><dd>{a.description}</dd></div>
+    </dl>
+    {a.status === "OFFERED" && offer && (<div className="offer">
+      <h4>Offer from {offer.lender}</h4>
+      <p>Amount ${offer.amountUsd} &middot; {offer.termMonths} months &middot; {offer.aprPct}% APR &middot; Fee ${offer.feeUsd} (taken from the amount sent, never paid in advance). You receive <b>${offer.amountUsd - offer.feeUsd}</b>.</p>
       <div className="row"><label>Account holder name<input onChange={set("holderName")} /></label><label>Bank name<input onChange={set("bankName")} /></label>
         <label>Account number<input onChange={set("accountNumber")} /></label><label>Routing or SWIFT code<input onChange={set("routingOrSwift")} /></label></div>
       <label>Sign by typing your full legal name<input value={sign} onChange={e => setSign(e.target.value)} /></label>
       <button onClick={() => respond("accept")}>Accept and sign</button><button className="alt" onClick={() => respond("decline")}>Decline</button></div>)}
-    {a.status === "ACCEPTED" && <div className="msg">Offer accepted. The lender is preparing your payment.</div>}
-    {a.status === "DECLINED" && a.adminNote && <div className="msg">{a.adminNote}</div>}</div>);
+    {a.status === "DECLINED" && a.adminNote && <div className="msg">{a.adminNote}</div>}
+  </div>);
 }
 
 function ReviewBox({ setMsg }: any) {
