@@ -12,12 +12,13 @@ export default function Dashboard() {
   useEffect(() => { load(); }, []);
   if (!apps) return <Auth onDone={load} />;
   return (<div className="w">
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}><h1>Your Capiryx dashboard</h1><button className="alt" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
+    <h1>Your Capiryx dashboard</h1>
     {msg && <div className="msg">{msg}</div>}
     <Kyc setMsg={setMsg} />
     {apps.map(a => <AppCard key={a.id} a={a} setMsg={setMsg} reload={load} />)}
     <Apply setMsg={setMsg} reload={load} />
     <ReviewBox setMsg={setMsg} />
+    <div className="logout-bar"><button className="btn-green" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
   </div>);
 }
 
@@ -25,27 +26,55 @@ function Auth({ onDone }: { onDone: () => void }) {
   const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
   const [sent, setSent] = useState(false);
   const [f, setF] = useState({ contact: "", code: "", password: "" });
-  const [err, setErr] = useState("");
+  const [note, setNote] = useState<{ t: string; bad: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
+  const fail = (t: string) => setNote({ t, bad: true });
+  function switchTo(m: "login" | "signup" | "reset") { setMode(m); setSent(false); setNote(null); setF({ ...f, code: "", password: "" }); }
+
   async function go() {
-    setErr("");
-    let r;
-    if (mode === "login") r = await api("/api/auth/login", "POST", { contact: f.contact, password: f.password });
-    else if (!sent) { r = await api("/api/auth/request-code", "POST", { contact: f.contact, purpose: mode === "signup" ? "SIGNUP" : "RESET" }); if (r.ok) { setSent(true); return; } }
-    else if (mode === "signup") r = await api("/api/auth/verify-code", "POST", f);
-    else r = await api("/api/auth/reset", "POST", { contact: f.contact, code: f.code, newPassword: f.password });
-    if (!r!.ok) return setErr(r!.data.error ?? "Something went wrong.");
-    if (mode === "reset") { setMode("login"); setSent(false); setErr("Password changed. Log in."); } else onDone();
+    setNote(null);
+    const contact = f.contact.trim().toLowerCase();
+    if (contact.length < 5) return fail("Enter your email address.");
+    setBusy(true);
+    try {
+      if (mode === "login") {
+        const r = await api("/api/auth/login", "POST", { contact, password: f.password });
+        return r.ok ? onDone() : fail(r.data.error ?? "Could not log in.");
+      }
+      if (!sent) {
+        const r = await api("/api/auth/request-code", "POST", { contact, purpose: mode === "signup" ? "SIGNUP" : "RESET" });
+        if (!r.ok) return fail(r.data.error ?? "Could not send the code.");
+        setSent(true);
+        return setNote({ t: "We sent a 6-digit code to " + contact + ". Enter it below" + (mode === "reset" ? " with your new password." : " and choose a password."), bad: false });
+      }
+      const code = f.code.replace(/\D/g, "");
+      if (code.length !== 6) return fail("Enter the 6-digit code from your email.");
+      if (f.password.length < 10) return fail("Your password must be at least 10 characters.");
+      const r = mode === "signup"
+        ? await api("/api/auth/verify-code", "POST", { contact, code, password: f.password })
+        : await api("/api/auth/reset", "POST", { contact, code, newPassword: f.password });
+      if (!r.ok) return fail(r.data.error ?? "Something went wrong (code " + r.status + ").");
+      if (mode === "reset") {
+        setMode("login"); setSent(false); setF({ contact: f.contact, code: "", password: "" });
+        return setNote({ t: "Password changed. Log in with your new password.", bad: false });
+      }
+      onDone();
+    } finally { setBusy(false); }
   }
+
   return (<div className="w"><div className="card" style={{ maxWidth: 420, margin: "40px auto" }}>
     <h2>{mode === "login" ? "Log in" : mode === "signup" ? "Create your account" : "Reset your password"}</h2>
-    <label>Email address<input value={f.contact} onChange={set("contact")} /></label>
-    {sent && <label>6-digit code<input value={f.code} onChange={set("code")} inputMode="numeric" maxLength={6} /></label>}
-    {(mode === "login" || sent) && <label>{mode === "reset" ? "New password" : "Password"} (10+ characters to create)<input type="password" value={f.password} onChange={set("password")} /></label>}
-    {err && <div className="msg err">{err}</div>}
-    <button onClick={go}>{mode === "login" ? "Log in" : sent ? "Confirm" : "Send code"}</button>
-    <p>{mode !== "login" && <a href="#" onClick={e => { e.preventDefault(); setMode("login"); setSent(false); }}>Back to log in</a>}
-      {mode === "login" && <><a href="#" onClick={e => { e.preventDefault(); setMode("signup"); }}>Create account</a> · <a href="#" onClick={e => { e.preventDefault(); setMode("reset"); }}>Forgot password?</a></>}</p>
+    <label>Email address<input type="email" value={f.contact} onChange={set("contact")} disabled={sent} autoComplete="email" /></label>
+    {sent && <label>6-digit code<input value={f.code} onChange={set("code")} inputMode="numeric" maxLength={6} autoComplete="one-time-code" /></label>}
+    {(mode === "login" || sent) && <label>{mode === "reset" ? "New password" : mode === "signup" ? "Choose a password" : "Password"}{mode !== "login" && <em style={{ fontWeight: 400 }}> (at least 10 characters)</em>}
+      <input type="password" value={f.password} onChange={set("password")} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>}
+    {note && <div className={"msg" + (note.bad ? " err" : "")}>{note.t}</div>}
+    <button onClick={go} disabled={busy}>{busy ? "Please wait..." : mode === "login" ? "Log in" : sent ? (mode === "reset" ? "Reset password" : "Create account") : "Send code"}</button>
+    {sent && <button className="alt" onClick={() => switchTo(mode)}>Start over</button>}
+    <p>{mode !== "login"
+      ? <a href="#" onClick={e => { e.preventDefault(); switchTo("login"); }}>Back to log in</a>
+      : <><a href="#" onClick={e => { e.preventDefault(); switchTo("signup"); }}>Create account</a> · <a href="#" onClick={e => { e.preventDefault(); switchTo("reset"); }}>Forgot password?</a></>}</p>
   </div></div>);
 }
 

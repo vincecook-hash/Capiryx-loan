@@ -8,7 +8,7 @@ const Body = z.object({ contact: z.string().trim().toLowerCase(), code: z.string
 
 export async function POST(req: Request) {
   const p = Body.safeParse(await req.json());
-  if (!p.success) return NextResponse.json({ error: "Invalid details." }, { status: 400 });
+  if (!p.success) return NextResponse.json({ error: "Check that your code has 6 digits and your new password has at least 10 characters." }, { status: 400 });
   const { contact, code, newPassword } = p.data;
   if (!(await consumeCode(contact, "RESET", code)))
     return NextResponse.json({ error: "That code is wrong or expired." }, { status: 400 });
