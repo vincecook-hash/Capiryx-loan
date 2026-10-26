@@ -18,14 +18,14 @@ export default function Admin() {
   const viewId = async (id: string) => { const r = await api(`/api/admin/documents/${id}`); r.ok ? window.open(r.data.url) : setMsg(r.data.error); };
   const viewBank = async (offerId: string) => { const r = await api(`/api/admin/offers/${offerId}/bank`); setMsg(r.ok ? `Bank: ${r.data.holderName}, ${r.data.bankName}, acct ${r.data.accountNumber}, ${r.data.routingOrSwift}` : r.data.error); };
   return (<div className="w">
-    <h1>Capiryx admin</h1>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}><h1>Capiryx admin</h1><div><a className="btn" href="/admin/audit">Audit log</a> <a className="btn" href="/api/admin/export">Export CSV</a> <button className="alt" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/admin/login"; }}>Log out</button></div></div>
     {msg && <div className="msg">{msg}</div>}
     <label>Filter<select value={filter} onChange={e => setFilter(e.target.value)}>
       <option value="">All</option>{["SUBMITTED", "UNDER_REVIEW", "OFFERED", "ACCEPTED", "DISBURSED", "DECLINED"].map(s => <option key={s}>{s}</option>)}</select></label>
     {apps.map(a => { const offer = a.offers?.find((x: any) => x.acceptedAt);
       return (<div className="card" key={a.id}>
         <h3>{a.fullName} <span className="pill">{a.status}</span></h3>
-        <p>{a.country} · {a.state} · {a.supportType} · ${a.amountUsd.toLocaleString()} · ID {a.idType} …{a.idNumberLast4}<br />{a.phone} {a.email}<br /><i>{a.description}</i></p>
+        <p>{a.country} · {a.state} · {a.supportType} · ${a.amountUsd.toLocaleString()} · ID {a.idType} …{a.idNumberLast4}<br />{a.phone} {a.email}<br /><i>{a.description}</i>{a.adminNote && <><br /><b>Note:</b> {a.adminNote}</>}</p>
         <button className="alt" onClick={() => viewId(a.id)}>View ID</button>
         {a.status === "SUBMITTED" && <button onClick={() => act(a.id, { action: "review" })}>Start review</button>}
         {["SUBMITTED", "UNDER_REVIEW"].includes(a.status) && <>

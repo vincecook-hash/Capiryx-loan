@@ -12,7 +12,7 @@ export default function Dashboard() {
   useEffect(() => { load(); }, []);
   if (!apps) return <Auth onDone={load} />;
   return (<div className="w">
-    <h1>Your Capiryx dashboard</h1>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}><h1>Your Capiryx dashboard</h1><button className="alt" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
     {msg && <div className="msg">{msg}</div>}
     <Kyc setMsg={setMsg} />
     {apps.map(a => <AppCard key={a.id} a={a} setMsg={setMsg} reload={load} />)}
@@ -39,7 +39,7 @@ function Auth({ onDone }: { onDone: () => void }) {
   }
   return (<div className="w"><div className="card" style={{ maxWidth: 420, margin: "40px auto" }}>
     <h2>{mode === "login" ? "Log in" : mode === "signup" ? "Create your account" : "Reset your password"}</h2>
-    <label>Email or phone with country code<input value={f.contact} onChange={set("contact")} /></label>
+    <label>Email address<input value={f.contact} onChange={set("contact")} /></label>
     {sent && <label>6-digit code<input value={f.code} onChange={set("code")} inputMode="numeric" maxLength={6} /></label>}
     {(mode === "login" || sent) && <label>{mode === "reset" ? "New password" : "Password"} (10+ characters to create)<input type="password" value={f.password} onChange={set("password")} /></label>}
     {err && <div className="msg err">{err}</div>}
@@ -61,11 +61,12 @@ function Apply({ setMsg, reload }: any) {
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
   async function submit() {
     if (!file) return setMsg("Choose a photo or PDF of your ID.");
-    const s = await api("/api/uploads/sign", "POST", { type: file.type });
-    if (!s.ok) return setMsg(s.data.error);
-    const up = await fetch(s.data.url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-    if (!up.ok) return setMsg("ID upload failed. Use a file under 5 MB.");
-    const r = await api("/api/applications", "POST", { ...f, idDocKey: s.data.key, amountUsd: Number(f.amountUsd) });
+    const fd = new FormData();
+    fd.append("file", file);
+    const up = await fetch("/api/uploads", { method: "POST", body: fd });
+    const uj = await up.json().catch(() => ({}));
+    if (!up.ok) return setMsg(uj.error ?? "ID upload failed.");
+    const r = await api("/api/applications", "POST", { ...f, idDocKey: uj.key, amountUsd: Number(f.amountUsd) });
     setMsg(r.ok ? "Application received. We will notify you as it moves forward." : "Check your details: " + Object.keys(r.data.fields ?? {}).join(", "));
     if (r.ok) reload();
   }
