@@ -17,7 +17,7 @@ export default function Dashboard() {
     <Kyc setMsg={setMsg} />
     {apps.map(a => <AppCard key={a.id} a={a} setMsg={setMsg} reload={load} />)}
     <Apply setMsg={setMsg} reload={load} />
-    <ReviewBox setMsg={setMsg} />
+    {apps.some(a => a.status === "DISBURSED") && <ReviewBox setMsg={setMsg} />}
     <div className="logout-bar"><button className="btn-green" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
   </div>);
 }
@@ -79,9 +79,16 @@ function Auth({ onDone }: { onDone: () => void }) {
 }
 
 function Kyc({ setMsg }: any) {
+  const [me, setMe] = useState<any>(null);
+  useEffect(() => { api("/api/me").then(r => { if (r.ok) setMe(r.data); }); }, []);
+  if (me?.kycStatus === "VERIFIED") return <div className="card"><h3>Identity check</h3><p>Your identity is verified.</p></div>;
   return (<div className="card"><h3>Identity check</h3>
-    <p>You need a verified identity before you can accept an offer. It takes a few minutes with your ID and a selfie.</p>
-    <button onClick={async () => { const r = await api("/api/kyc/start", "POST"); r.ok ? (window.location.href = r.data.url) : setMsg(r.data.error); }}>Verify my identity</button></div>);
+    {me?.kycMode === "persona" ? (<>
+      <p>You need a verified identity before you can accept an offer. It takes a few minutes with your ID and a selfie.</p>
+      <button onClick={async () => { const r = await api("/api/kyc/start", "POST"); r.ok ? (window.location.href = r.data.url) : setMsg(r.data.error); }}>Verify my identity</button>
+    </>) : (
+      <p>Our team checks your identity from the ID you upload with your application. Status: <b>{me?.kycStatus === "FAILED" ? "Could not be verified. Please contact us." : "Pending review"}</b>. You can accept an offer once this shows as verified.</p>
+    )}</div>);
 }
 
 function Apply({ setMsg, reload }: any) {

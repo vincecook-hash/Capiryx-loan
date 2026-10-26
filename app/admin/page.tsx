@@ -26,7 +26,7 @@ export default function Admin() {
       return (<div className="card" key={a.id}>
         <h3>{a.fullName} <span className="pill">{a.status}</span></h3>
         <p>{a.country} · {a.state} · {a.supportType} · ${a.amountUsd.toLocaleString()} · ID {a.idType} …{a.idNumberLast4}<br />{a.phone} {a.email}<br /><i>{a.description}</i>{a.adminNote && <><br /><b>Note:</b> {a.adminNote}</>}</p>
-        <button className="alt" onClick={() => viewId(a.id)}>View ID</button>
+        <button className="alt" onClick={() => viewId(a.id)}>View ID</button> <span className="pill">Identity: {a.user?.kycStatus ?? "PENDING"}</span> {a.user?.kycStatus !== "VERIFIED" && <button onClick={async () => { const r = await api(`/api/admin/kyc/${a.userId}`, "PATCH", { status: "VERIFIED" }); setMsg(r.ok ? "Identity marked as verified." : r.data.error); load(); }}>Mark identity verified</button>}
         {a.status === "SUBMITTED" && <button onClick={() => act(a.id, { action: "review" })}>Start review</button>}
         {["SUBMITTED", "UNDER_REVIEW"].includes(a.status) && <>
           <button onClick={() => { setOfferFor(a.id); setO({ ...o, amountUsd: a.amountUsd }); }}>Make offer</button>
