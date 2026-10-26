@@ -1,5 +1,6 @@
 // Email via Resend, SMS via Twilio. Without keys (local dev) messages are logged instead.
 export async function sendEmail(to: string, subject: string, text: string) {
+  if (process.env.NODE_ENV !== "production") console.log("[dev]", to, text);
   if (!process.env.EMAIL_API_KEY) return console.log("[email]", to, subject, text);
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -10,6 +11,7 @@ export async function sendEmail(to: string, subject: string, text: string) {
 }
 
 export async function sendSms(to: string, body: string) {
+  if (process.env.NODE_ENV !== "production") console.log("[dev]", to, body);
   const { TWILIO_SID: sid, TWILIO_TOKEN: tok, TWILIO_FROM: from } = process.env;
   if (!sid || !tok) return console.log("[sms]", to, body);
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
