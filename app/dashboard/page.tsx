@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Logo from "@/components/Logo";
 
 const STEPS = ["SUBMITTED", "UNDER_REVIEW", "OFFERED", "ACCEPTED", "DISBURSED"];
 const LABEL: any = { SUBMITTED: "Submitted", UNDER_REVIEW: "Under review", OFFERED: "Offer made", ACCEPTED: "Offer accepted", DISBURSED: "Funds sent", DECLINED: "Declined" };
@@ -16,9 +17,7 @@ export default function Dashboard() {
   const showForm = !hasActive && (apps.length === 0 || openForm);
   return (<>
     <div className="dash-hero"><div className="dash-hero-in">
-      <span className="eyebrow light">Capiryx</span>
-      <h1>Your dashboard</h1>
-      <p>Making life better. Track your application and offers here.</p>
+      <div className="brand-row"><Logo size={52} /><div><h1>Capiryx</h1><p>Making life better</p></div></div>
     </div></div>
     <div className="w">
       {msg && <div className="msg">{msg}</div>}
