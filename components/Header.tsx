@@ -11,7 +11,7 @@ function Mark() {
   );
 }
 export default function Header() {
-  const links = [["/#tracks", "Funding"], ["/#how", "How it works"], ["/#reviews", "Reviews"], ["/contact", "Contact"]];
+  const links = [["/#tracks", "Funding"], ["/#how", "How it works"], ["/#fees", "Fees"], ["/#faq", "FAQ"], ["/#reviews", "Reviews"], ["/contact", "Contact"]];
   return (
     <header className="site-h"><div className="nav">
       <Link className="logo" href="/"><Logo /><span>Capiryx</span></Link>

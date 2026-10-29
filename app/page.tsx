@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Calculator from "@/components/Calculator";
 import ReviewCarousel from "@/components/ReviewCarousel";
+import Faq from "@/components/Faq";
 
 export default function Home() {
   return (
@@ -33,6 +34,8 @@ export default function Home() {
           <li><b>Accept and receive</b><span>Verify your identity, sign online, and the lender sends funds to your bank account.</span></li>
         </ol>
       </div></section>
+
+      <Faq />
 
       <section className="tint" id="reviews"><div className="wrap">
         <h2>Reviews from funded members</h2>
