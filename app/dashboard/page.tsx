@@ -27,7 +27,7 @@ export default function Dashboard() {
         <div className="card center"><p>Need more funding?</p><button onClick={() => setOpenForm(true)}>Start a new application</button></div>)}
       {showForm && <Apply setMsg={setMsg} reload={load} />}
       {apps.some(a => a.status === "DISBURSED") && <ReviewBox setMsg={setMsg} />}
-      <div className="logout-bar"><button className="btn-green" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
+      <div className="logout-bar"><a className="settings-link" href="/account">Account settings</a><button className="btn-green" onClick={async () => { await api("/api/auth/logout", "POST"); window.location.href = "/"; }}>Log out</button></div>
     </div>
   </>);
 }

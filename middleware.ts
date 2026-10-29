@@ -23,7 +23,7 @@ export async function middleware(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "local";
 
   if (pathname.startsWith("/api/")) {
-    const strict = pathname.startsWith("/api/auth") || pathname === "/api/admin/login";
+    const strict = pathname.startsWith("/api/auth") || pathname.startsWith("/api/account") || pathname === "/api/admin/login";
     if (await limited(`rl:${ip}:${strict ? "auth" : "api"}`, strict ? 20 : 120, strict ? 600 : 60))
       return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
     if (req.method !== "GET" && pathname !== "/api/kyc/webhook") {
