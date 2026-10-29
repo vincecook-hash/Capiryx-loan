@@ -196,3 +196,10 @@ details p{margin:0 0 16px;color:var(--mute)}
 .readyok{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#eaf6f1;border-left:5px solid #1e8449;border-radius:10px;padding:14px 18px;font-weight:700;color:#14532d}
 .readynote{margin:0;color:var(--mute)}
 @media(max-width:700px){.checkgrid{grid-template-columns:1fr}}
+
+.state{text-align:center;padding:70px 20px;max-width:560px}
+.state svg{margin-bottom:10px}
+.state p{color:var(--mute)}
+.spinner{width:46px;height:46px;border:5px solid var(--line);border-top-color:var(--teal);border-radius:50%;margin:40px auto;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}
