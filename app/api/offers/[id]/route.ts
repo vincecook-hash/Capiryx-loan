@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
-import { send } from "@/lib/notify";
+import { send, notifyAdmin } from "@/lib/notify";
 
 const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("decline") }),
@@ -42,5 +42,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     db.application.update({ where: { id: offer.applicationId }, data: { status: "ACCEPTED" } }),
   ]);
   await send(to, "Offer accepted", `We received your signed acceptance. ${offer.lender} will send $${offer.amountUsd - offer.feeUsd} to your bank account. We will tell you when it is sent.`);
+  await notifyAdmin("Offer accepted: ready for payout", `${offer.application.fullName} accepted the offer from ${offer.lender} (Ref ${offer.applicationId.slice(-8).toUpperCase()}).\n\nOpen the admin page to view the bank details and arrange payment:\n${process.env.APP_URL ?? ""}/admin`);
   return NextResponse.json({ ok: true });
 }

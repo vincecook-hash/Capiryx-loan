@@ -21,7 +21,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!a) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const d = p.data, to = a.email ?? a.phone, link = `${process.env.APP_URL}/dashboard`;
 
-  if (d.action === "review") await db.application.update({ where: { id: a.id }, data: { status: "UNDER_REVIEW" } });
+  if (d.action === "review") {
+    await db.application.update({ where: { id: a.id }, data: { status: "UNDER_REVIEW" } });
+    await send(to, "Your application is under review", `Hello ${a.fullName.split(" ")[0]},\n\nYour application (Ref ${a.id.slice(-8).toUpperCase()}) is now being reviewed. We will email you when there is an update.\n\nYou can follow progress here:\n${link}`);
+  }
   if (d.action === "reject") {
     await db.application.update({ where: { id: a.id }, data: { status: "DECLINED", adminNote: d.note } });
     await send(to, "Your Capiryx application", "Thank you for applying. We could not move your application forward this time. Log in to see details.");

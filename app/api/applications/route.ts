@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
+import { send, notifyAdmin } from "@/lib/notify";
 
 const Body = z.object({
   fullName: z.string().trim().min(3).max(120), dob: z.coerce.date(),
@@ -23,7 +24,14 @@ export async function POST(req: Request) {
   if (Date.now() - p.data.dob.getTime() < 18 * 31557600000) return NextResponse.json({ error: "You must be at least 18 to apply." }, { status: 400 });
   if (!p.data.idDocKey.startsWith(`ids/${s.userId}/`)) return NextResponse.json({ error: "Upload your ID again." }, { status: 400 });
   const { idNumber, email, ...d } = p.data;
-  const app = await db.application.create({ data: { ...d, email: email || null, userId: s.userId, idNumberEnc: encrypt(idNumber) } });
+  const user = await db.user.findUnique({ where: { id: s.userId } });
+  const app = await db.application.create({ data: { ...d, email: email || user?.email || null, userId: s.userId, idNumberEnc: encrypt(idNumber) } });
+  const ref = app.id.slice(-8).toUpperCase();
+  const base = process.env.APP_URL ?? "";
+  const who = app.email ?? app.phone;
+  await send(who, `We received your application (Ref ${ref})`,
+    `Hello ${app.fullName.split(" ")[0]},\n\nWe received your application for ${app.supportType} of $${app.amountUsd.toLocaleString("en-US")}.\n\nYour reference number is ${ref}. Please quote it if you ever contact us.\n\nWhat happens next: our team reviews your application and your ID. We will email you whenever something changes, and you can follow progress here:\n${base}/dashboard\n\nThere is no fee to apply, and we will never ask you to pay before funds are released.\n\nThe Capiryx team`);
+  await notifyAdmin(`New application ${ref}`, `${app.fullName} (${app.country}) applied for ${app.supportType}, $${app.amountUsd.toLocaleString("en-US")}.\n\nReview it here:\n${base}/admin`);
   return NextResponse.json({ id: app.id, status: app.status }, { status: 201 });
 }
 
