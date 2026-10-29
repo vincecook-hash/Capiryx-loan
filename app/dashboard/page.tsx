@@ -101,36 +101,159 @@ function Kyc({ setMsg }: any) {
     )}</div>);
 }
 
+const DIAL: any = { LC: "+1758", MX: "+52" };
+const EMPTY = { fullName: "", dob: "", country: "", idType: "Passport", idNumber: "", phone: "", email: "", state: "", address: "", supportType: "Business growth", amountUsd: "", description: "", consent: false };
+const WSTEPS = ["About you", "ID and contact", "Funding", "Review"];
+const FIELD_NAMES: any = { fullName: "full legal name", dob: "date of birth", idNumber: "ID number", phone: "phone (start with + and the country code)", email: "email address", country: "country", state: "state or district", address: "home address", supportType: "type of support", amountUsd: "amount (at least 500)", description: "reason for funding (at least 20 characters)" };
+
+function Fld({ label, err, hint, children }: any) {
+  return (<label className={err ? "has-err" : ""}>{label}{children}{hint && !err && <small className="hint">{hint}</small>}{err && <small className="ferr">{err}</small>}</label>);
+}
+
 function Apply({ setMsg, reload }: any) {
-  const [f, setF] = useState<any>({ country: "", idType: "Passport", supportType: "Business growth" });
+  const [step, setStep] = useState(0);
+  const [f, setF] = useState<any>(EMPTY);
   const [file, setFile] = useState<File | null>(null);
-  const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
-  async function submit() {
-    if (!file) return setMsg("Choose a photo or PDF of your ID.");
-    const fd = new FormData();
-    fd.append("file", file);
-    const up = await fetch("/api/uploads", { method: "POST", body: fd });
-    const uj = await up.json().catch(() => ({}));
-    if (!up.ok) return setMsg(uj.error ?? "ID upload failed.");
-    const r = await api("/api/applications", "POST", { ...f, idDocKey: uj.key, amountUsd: Number(f.amountUsd) });
-    const NAMES: any = { fullName: "full legal name", dob: "date of birth", idNumber: "ID number (at least 4 characters)", phone: "phone (start with + and the country code, e.g. +17585550123)", email: "email address", country: "country", state: "state or district", address: "home address (at least 5 characters)", supportType: "type of support", amountUsd: "amount (at least 500)", description: "reason for funding (at least 20 characters)" };
-    setMsg(r.ok ? "Application received. We will notify you as it moves forward." : r.data.fields ? "Please fix: " + Object.keys(r.data.fields).map(k => NAMES[k] ?? k).join("; ") : (r.data.error ?? "Could not submit your application."));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    if (r.ok) reload();
+  const [preview, setPreview] = useState("");
+  const [errs, setErrs] = useState<any>({});
+  const [busy, setBusy] = useState(false);
+  const set = (k: string) => (e: any) => { setF({ ...f, [k]: e.target.value }); if (errs[k]) setErrs({ ...errs, [k]: "" }); };
+  const cleanPhone = (v: string) => v.replace(/[\s\-().]/g, "");
+
+  useEffect(() => {
+    if (file && file.type.startsWith("image/")) {
+      const u = URL.createObjectURL(file);
+      setPreview(u);
+      return () => URL.revokeObjectURL(u);
+    }
+    setPreview("");
+  }, [file]);
+
+  function check(n: number) {
+    const e: any = {};
+    if (n === 0) {
+      if (f.fullName.trim().length < 3 || !f.fullName.trim().includes(" ")) e.fullName = "Enter your first and last name as shown on your ID.";
+      const d = new Date(f.dob);
+      if (!f.dob || isNaN(d.getTime())) e.dob = "Choose your date of birth.";
+      else {
+        const age = (Date.now() - d.getTime()) / 31557600000;
+        if (age < 18) e.dob = "You must be at least 18 to apply.";
+        else if (age > 110) e.dob = "Please check the date of birth.";
+      }
+      if (!f.country) e.country = "Choose your country.";
+    }
+    if (n === 1) {
+      if (f.idNumber.trim().length < 4) e.idNumber = "Enter your ID number.";
+      if (!file) e.file = "Choose a photo or PDF of your ID.";
+      else if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type)) e.file = "Use a JPG, PNG, or PDF.";
+      else if (file.size > 4 * 1024 * 1024) e.file = "That file is too large. Use one under 4 MB.";
+      if (!/^\+\d{7,15}$/.test(cleanPhone(f.phone))) e.phone = "Start with + and your country code, for example " + (DIAL[f.country] ?? "+1758") + "5550123.";
+      if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) e.email = "Check the email address.";
+      if (f.state.trim().length < 2) e.state = "Enter your state or district.";
+      if (f.address.trim().length < 5) e.address = "Enter your home address.";
+    }
+    if (n === 2) {
+      const a = Number(f.amountUsd);
+      if (!Number.isInteger(a) || a < 500) e.amountUsd = "Enter a whole amount of at least 500.";
+      if (f.description.trim().length < 20) e.description = "Please write at least 20 characters.";
+    }
+    return e;
   }
-  return (<div className="card"><h3>New application</h3>
-    <label>Full legal name (as on your ID)<input onChange={set("fullName")} /></label>
-    <div className="row"><label>Date of birth<input type="date" onChange={set("dob")} /></label>
-      <label>Country<select onChange={set("country")}><option value="">Choose</option><option value="LC">St Lucia</option><option value="MX">Mexico</option></select></label></div>
-    <div className="row"><label>ID type<select onChange={set("idType")}><option>Passport</option><option>National ID card</option><option>Driver’s licence</option></select></label>
-      <label>ID number<input onChange={set("idNumber")} /></label></div>
-    <label>ID photo or PDF<input type="file" accept="image/jpeg,image/png,application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></label>
-    <div className="row"><label>Phone with country code (+1758…)<input onChange={set("phone")} /></label><label>Email (optional)<input onChange={set("email")} /></label></div>
-    <div className="row"><label>State or district<input onChange={set("state")} /></label><label>Home address<input onChange={set("address")} /></label></div>
-    <div className="row"><label>Type of support<select onChange={set("supportType")}><option>Business growth</option><option>New business start-up</option><option>Home purchase support</option><option>Home repair or improvement</option></select></label>
-      <label>Amount (USD)<input type="number" onChange={set("amountUsd")} /></label></div>
-    <label>Why do you need funding?<textarea maxLength={600} onChange={set("description")} /></label>
-    <button onClick={submit}>Submit application</button></div>);
+  const top = () => document.getElementById("apply-top")?.scrollIntoView({ behavior: "smooth" });
+  function next() { const e = check(step); setErrs(e); if (Object.keys(e).length) return; setStep(step + 1); top(); }
+  function back() { setErrs({}); setStep(step - 1); top(); }
+
+  async function submit() {
+    for (const n of [0, 1, 2]) {
+      const e = check(n);
+      if (Object.keys(e).length) { setErrs(e); setStep(n); return setMsg("Please fix the highlighted fields."); }
+    }
+    if (!f.consent) return setErrs({ consent: "Please confirm to continue." });
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file!);
+      const up = await fetch("/api/uploads", { method: "POST", body: fd });
+      const uj = await up.json().catch(() => ({}));
+      if (!up.ok) return setMsg(uj.error ?? "ID upload failed.");
+      const r = await api("/api/applications", "POST", {
+        fullName: f.fullName.trim(), dob: f.dob, idType: f.idType, idNumber: f.idNumber.trim(), idDocKey: uj.key,
+        phone: cleanPhone(f.phone), email: f.email.trim(), country: f.country, state: f.state.trim(), address: f.address.trim(),
+        supportType: f.supportType, amountUsd: Number(f.amountUsd), description: f.description.trim(),
+      });
+      if (r.ok) { setMsg("Application received. We will notify you as it moves forward."); reload(); }
+      else setMsg(r.data.fields ? "Please fix: " + Object.keys(r.data.fields).map(k => FIELD_NAMES[k] ?? k).join("; ") : (r.data.error ?? "Could not submit your application."));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally { setBusy(false); }
+  }
+
+  return (<div className="card" id="apply-top">
+    <h3>New application</h3>
+    <div className="wiz">{WSTEPS.map((t, i) => (
+      <div key={t} className={"wstep" + (i < step ? " done" : i === step ? " now" : "")}><i>{i < step ? "\u2713" : i + 1}</i><span>{t}</span></div>))}</div>
+    <div className="wbar"><div style={{ width: ((step + 1) / WSTEPS.length) * 100 + "%" }} /></div>
+
+    {step === 0 && (<>
+      <Fld label="Full legal name (as on your ID)" err={errs.fullName}><input value={f.fullName} onChange={set("fullName")} autoComplete="name" /></Fld>
+      <div className="row">
+        <Fld label="Date of birth" err={errs.dob}><input type="date" value={f.dob} onChange={set("dob")} /></Fld>
+        <Fld label="Country" err={errs.country}><select value={f.country} onChange={set("country")}><option value="">Choose</option><option value="LC">St Lucia</option><option value="MX">Mexico</option></select></Fld>
+      </div>
+    </>)}
+
+    {step === 1 && (<>
+      <div className="row">
+        <Fld label="ID type"><select value={f.idType} onChange={set("idType")}><option>Passport</option><option>National ID card</option><option>Driver’s licence</option></select></Fld>
+        <Fld label="ID number" err={errs.idNumber}><input value={f.idNumber} onChange={set("idNumber")} /></Fld>
+      </div>
+      <Fld label="ID photo or PDF" err={errs.file} hint="JPG, PNG or PDF, up to 4 MB. Show all four corners and make sure the text is readable.">
+        <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={e => { setFile(e.target.files?.[0] ?? null); setErrs({ ...errs, file: "" }); }} />
+      </Fld>
+      {file && (<div className="preview">
+        {preview ? <img src={preview} alt="Preview of your ID" /> : <div className="pdfbox">PDF selected</div>}
+        <small>{file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)</small></div>)}
+      <div className="row">
+        <Fld label="Phone with country code" err={errs.phone} hint={"Example: " + (DIAL[f.country] ?? "+1758") + "5550123"}><input type="tel" value={f.phone} onChange={set("phone")} autoComplete="tel" /></Fld>
+        <Fld label="Email (optional)" err={errs.email}><input type="email" value={f.email} onChange={set("email")} autoComplete="email" /></Fld>
+      </div>
+      <div className="row">
+        <Fld label="State or district" err={errs.state}><input value={f.state} onChange={set("state")} /></Fld>
+        <Fld label="Home address" err={errs.address}><input value={f.address} onChange={set("address")} autoComplete="street-address" /></Fld>
+      </div>
+    </>)}
+
+    {step === 2 && (<>
+      <div className="row">
+        <Fld label="Type of support"><select value={f.supportType} onChange={set("supportType")}><option>Business growth</option><option>New business start-up</option><option>Home purchase support</option><option>Home repair or improvement</option></select></Fld>
+        <Fld label="Amount needed (USD)" err={errs.amountUsd} hint="Whole dollars, at least 500."><input type="number" min={500} value={f.amountUsd} onChange={set("amountUsd")} /></Fld>
+      </div>
+      <Fld label="Why do you need funding?" err={errs.description} hint={f.description.length + " / 600 characters (at least 20)"}><textarea maxLength={600} value={f.description} onChange={set("description")} /></Fld>
+    </>)}
+
+    {step === 3 && (<>
+      <p className="msg">Check your details. You can go back to change anything. There is no fee to apply.</p>
+      <dl className="facts">
+        <div><dt>Name</dt><dd>{f.fullName}</dd></div>
+        <div><dt>Date of birth</dt><dd>{f.dob}</dd></div>
+        <div><dt>Country</dt><dd>{f.country === "LC" ? "St Lucia" : "Mexico"}</dd></div>
+        <div><dt>ID</dt><dd>{f.idType}, {f.idNumber}</dd></div>
+        <div><dt>ID file</dt><dd>{file?.name}</dd></div>
+        <div><dt>Phone</dt><dd>{cleanPhone(f.phone)}</dd></div>
+        <div><dt>State or district</dt><dd>{f.state}</dd></div>
+        <div className="wide"><dt>Address</dt><dd>{f.address}</dd></div>
+        <div><dt>Type of support</dt><dd>{f.supportType}</dd></div>
+        <div><dt>Amount</dt><dd>${Number(f.amountUsd).toLocaleString()}</dd></div>
+        <div className="wide"><dt>Reason</dt><dd>{f.description}</dd></div>
+      </dl>
+      <label className="consent"><input type="checkbox" checked={f.consent} onChange={e => { setF({ ...f, consent: e.target.checked }); setErrs({}); }} /> I confirm the information is true and I agree to the <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy policy</a>.</label>
+      {errs.consent && <small className="ferr">{errs.consent}</small>}
+    </>)}
+
+    <div className="nav-row">
+      {step > 0 && <button className="alt" onClick={back} disabled={busy}>Back</button>}
+      {step < 3 ? <button onClick={next}>Continue</button> : <button onClick={submit} disabled={busy}>{busy ? "Submitting..." : "Submit application"}</button>}
+    </div>
+  </div>);
 }
 
 const STEP_NOTE: any = {

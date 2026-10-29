@@ -20,6 +20,7 @@ export async function POST(req: Request) {
   if (!s || s.role !== "USER") return NextResponse.json({ error: "Log in first." }, { status: 401 });
   const p = Body.safeParse(await req.json());
   if (!p.success) return NextResponse.json({ error: "Some fields are missing or invalid.", fields: p.error.flatten().fieldErrors }, { status: 400 });
+  if (Date.now() - p.data.dob.getTime() < 18 * 31557600000) return NextResponse.json({ error: "You must be at least 18 to apply." }, { status: 400 });
   if (!p.data.idDocKey.startsWith(`ids/${s.userId}/`)) return NextResponse.json({ error: "Upload your ID again." }, { status: 400 });
   const { idNumber, email, ...d } = p.data;
   const app = await db.application.create({ data: { ...d, email: email || null, userId: s.userId, idNumberEnc: encrypt(idNumber) } });

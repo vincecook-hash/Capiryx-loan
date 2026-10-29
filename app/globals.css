@@ -123,3 +123,22 @@ button:disabled{opacity:.6;cursor:wait}
 .brand-row svg{border-radius:12px;box-shadow:0 0 0 3px rgba(255,255,255,.85);flex:none}
 .dash-hero .brand-row h1{font-size:clamp(2rem,5vw,2.8rem);margin:0;letter-spacing:.01em}
 .dash-hero .brand-row p{font-size:1rem;margin:2px 0 0}
+
+.wiz{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0 8px}
+.wstep{text-align:center;font-size:.78rem;color:var(--mute);line-height:1.2}
+.wstep i{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin:0 auto 6px;border-radius:50%;border:2px solid var(--line);background:#fff;font-style:normal;font-weight:700}
+.wstep.done i{background:var(--teal);border-color:var(--teal);color:#fff}
+.wstep.now i{background:var(--gold);border-color:var(--gold);color:#0e2a47}
+.wstep.now,.wstep.done{color:var(--ink);font-weight:600}
+.wbar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:18px}
+.wbar div{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold));transition:width .3s}
+.hint{font-weight:400;color:var(--mute);font-size:.8rem}
+.ferr{font-weight:600;color:#a32020;font-size:.82rem}
+label.has-err input,label.has-err select,label.has-err textarea{border-color:#c0392b;background:#fff7f7}
+.preview{display:flex;align-items:center;gap:14px;background:var(--mist);border-radius:10px;padding:10px;margin:6px 0 10px}
+.preview img{max-height:110px;max-width:170px;border-radius:8px;border:1px solid var(--line)}
+.pdfbox{width:90px;height:70px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:.75rem;font-weight:700;color:var(--teal)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin-top:14px}
+.consent input{width:auto;margin-top:4px}
+.nav-row{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+@media(max-width:600px){.wstep{font-size:.68rem}.nav-row button{flex:1}.preview{flex-direction:column;align-items:flex-start}}
