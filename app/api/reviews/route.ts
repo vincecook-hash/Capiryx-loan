@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() { // public: approved only
   const rows = await db.review.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 50,
     select: { id: true, text: true, createdAt: true } });

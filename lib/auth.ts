@@ -30,5 +30,5 @@ export async function requireAdmin() {
   return u?.role === "ADMIN" ? u : null;
 }
 
-export const audit = (actorId: string, action: string, target: string, detail?: object) =>
+export const audit = (actorId: string, action: string, target: string, detail?: any) =>
   db.auditLog.create({ data: { actorId, action, target, detail } });
