@@ -163,3 +163,15 @@ details p{margin:0 0 16px;color:var(--mute)}
 .scambox ul{padding-left:18px;margin:0 0 12px}
 .scambox li{margin-bottom:8px}
 @media(max-width:860px){.feegrid,.faqwrap{grid-template-columns:1fr}.scambox{position:static}}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0 10px}
+.stat{background:#fff;border:1px solid var(--line);border-top:4px solid var(--teal2);border-radius:12px;padding:14px}
+.stat.click{cursor:pointer}.stat.click:hover{border-color:var(--teal)}
+.stat span{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:700}
+.stat b{display:block;font:700 1.7rem var(--f-head),sans-serif;color:var(--ink);margin:2px 0}
+.stat small{color:var(--mute);font-size:.78rem}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.chip{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.85rem;margin:0}
+.chip:hover{border-color:var(--teal)}
+.ref{font-weight:600;color:var(--mute);font-size:.75rem;margin-left:6px}
+@media(max-width:860px){.stats{grid-template-columns:1fr 1fr}}

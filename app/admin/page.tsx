@@ -1,30 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import AdminStats from "@/components/AdminStats";
 
 export default function Admin() {
   const [apps, setApps] = useState<any[]>([]);
   const [revs, setRevs] = useState<any[]>([]);
   const [filter, setFilter] = useState("");
+  const [q, setQ] = useState("");
   const [msg, setMsg] = useState("");
   const [offerFor, setOfferFor] = useState<any>(null);
   const [o, setO] = useState<any>({ lender: "", amountUsd: 0, termMonths: 24, aprPct: 8, feeUsd: 0 });
   const load = async () => {
-    const a = await api("/api/admin/applications" + (filter ? `?status=${filter}` : "")); if (a.ok) setApps(a.data);
+    const qs = new URLSearchParams(); if (filter) qs.set("status", filter); if (q.trim()) qs.set("q", q.trim()); const a = await api("/api/admin/applications" + (qs.toString() ? "?" + qs.toString() : "")); if (a.ok) setApps(a.data);
     const r = await api("/api/admin/reviews"); if (r.ok) setRevs(r.data);
   };
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [filter, q]);
   const act = async (id: string, body: any) => { const r = await api(`/api/admin/applications/${id}`, "PATCH", body); setMsg(r.ok ? "Updated." : r.data.error); load(); };
   const viewId = async (id: string) => { const r = await api(`/api/admin/documents/${id}`); r.ok ? window.open(r.data.url) : setMsg(r.data.error); };
   const viewBank = async (offerId: string) => { const r = await api(`/api/admin/offers/${offerId}/bank`); setMsg(r.ok ? `Bank: ${r.data.holderName}, ${r.data.bankName}, acct ${r.data.accountNumber}, ${r.data.routingOrSwift}` : r.data.error); };
   return (<div className="w">
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}><h1>Capiryx admin</h1><div><a className="btn" href="/admin/audit">Audit log</a> <a className="btn" href="/api/admin/export">Export CSV</a></div></div>
     {msg && <div className="msg">{msg}</div>}
+    <AdminStats trigger={apps} onPick={setFilter} />
+    <label>Search<input placeholder="Name, email, phone, state or reference" value={q} onChange={e => setQ(e.target.value)} /></label>
     <label>Filter<select value={filter} onChange={e => setFilter(e.target.value)}>
       <option value="">All</option>{["SUBMITTED", "UNDER_REVIEW", "OFFERED", "ACCEPTED", "DISBURSED", "DECLINED"].map(s => <option key={s}>{s}</option>)}</select></label>
     {apps.map(a => { const offer = a.offers?.find((x: any) => x.acceptedAt);
       return (<div className="card" key={a.id}>
-        <h3>{a.fullName} <span className="pill">{a.status}</span></h3>
+        <h3>{a.fullName} <span className="pill">{a.status}</span> <small className="ref">Ref {String(a.id).slice(-8).toUpperCase()}</small></h3>
         <p>{a.country} · {a.state} · {a.supportType} · ${a.amountUsd.toLocaleString()} · ID {a.idType} …{a.idNumberLast4}<br />{a.phone} {a.email}<br /><i>{a.description}</i>{a.adminNote && <><br /><b>Note:</b> {a.adminNote}</>}</p>
         <button className="alt" onClick={() => viewId(a.id)}>View ID</button> <span className="pill">Identity: {a.user?.kycStatus ?? "PENDING"}</span> {a.user?.kycStatus !== "VERIFIED" && <button onClick={async () => { const r = await api(`/api/admin/kyc/${a.userId}`, "PATCH", { status: "VERIFIED" }); setMsg(r.ok ? "Identity marked as verified." : r.data.error); load(); }}>Mark identity verified</button>}
         {a.status === "SUBMITTED" && <button onClick={() => act(a.id, { action: "review" })}>Start review</button>}
